@@ -8,7 +8,6 @@ import java.util.List;
 
 public class UserDao {
 
-    // Existing registerUser and loginUser methods...
     public boolean registerUser(String username, String password, String fullName, String role) {
         String query = "INSERT INTO users (username, password, full_name, role, status) VALUES (?, ?, ?, ?, 'PENDING')";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -48,9 +47,6 @@ public class UserDao {
         return null;
     }
 
-    // --- Deliverable 5 Enhancements ---
-
-    // 1. Returns all registered accounts regardless of role[cite: 12]
     public List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
         String query = "SELECT * FROM users";
@@ -73,7 +69,6 @@ public class UserDao {
         return users;
     }
 
-    // 2. Returns accounts where status = 'PENDING'[cite: 12]
     public List<User> getPendingUsers() {
         List<User> users = new ArrayList<>();
         String query = "SELECT * FROM users WHERE status = 'PENDING'";
@@ -96,7 +91,6 @@ public class UserDao {
         return users;
     }
 
-    // 3. Updates target user status from 'PENDING' to 'APPROVED'[cite: 12]
     public boolean approveUser(int userId) {
         String query = "UPDATE users SET status = 'APPROVED' WHERE user_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -105,6 +99,21 @@ public class UserDao {
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Error approving user: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // Deliverable 7: Update user role and status using PreparedStatement[cite: 8]
+    public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
+        String query = "UPDATE users SET role = ?, status = ? WHERE user_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, newRole.toUpperCase());
+            pstmt.setString(2, newStatus.toUpperCase());
+            pstmt.setInt(3, userId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating user role and status: " + e.getMessage());
             return false;
         }
     }
