@@ -51,13 +51,13 @@ public class Authentication {
         User user = userDao.loginUser(username, password);
         if (user != null) {
             if ("PENDING".equalsIgnoreCase(user.status())) {
-                System.out.println("Your account is currently PENDING approval by an Administrator.");
+                System.out.println("\n[!] Your account is currently PENDING approval by an Administrator.");
                 return;
             }
-            System.out.println("Login successful! Welcome, " + user.fullName() + " (" + user.role() + ")");
+            System.out.println("\n[+] Login successful! Welcome, " + user.fullName() + " (" + user.role() + ")");
             routeUserRole(user);
         } else {
-            System.out.println("Invalid username or password.");
+            System.out.println("\n[-] Invalid username or password.");
         }
     }
 
@@ -69,7 +69,7 @@ public class Authentication {
         System.out.print("Enter full name: ");
         String fullName = scanner.nextLine();
 
-        System.out.println("Select Role:");
+        System.out.println("\nSelect Role:");
         System.out.println("[1] Admin / Business Owner");
         System.out.println("[2] Dispatcher / Office Staff");
         System.out.println("[3] Delivery Rider");
@@ -79,9 +79,15 @@ public class Authentication {
         String role;
 
         switch (roleChoice) {
-            case "1": role = "ADMIN"; break;
-            case "2": role = "DISPATCHER"; break;
-            case "3": role = "RIDER"; break;
+            case "1":
+                role = "ADMIN";
+                break;
+            case "2":
+                role = "DISPATCHER";
+                break;
+            case "3":
+                role = "RIDER";
+                break;
             default:
                 System.out.println("Invalid role selected. Defaulting to RIDER.");
                 role = "RIDER";
@@ -89,14 +95,24 @@ public class Authentication {
 
         boolean success = userDao.registerUser(username, password, fullName, role);
         if (success) {
-            System.out.println("Registration successful! Your account status is PENDING approval.");
+            System.out.println("\n[+] Registration successful! Your account status is PENDING approval.");
         } else {
-            System.out.println("Registration failed. Username may already exist.");
+            System.out.println("\n[-] Registration failed. Username may already exist.");
         }
     }
 
     private void routeUserRole(User user) {
-        // Here you can route to your specific role-based menu systems later
-        System.out.println("Routing to " + user.role() + " dashboard... (Menu hooks go here)");
+        String role = user.role().toUpperCase();
+
+        if ("ADMIN".equals(role) || "BUSINESS OWNER".equals(role)) {
+            AdminMenu adminMenu = new AdminMenu(userDao, scanner);
+            adminMenu.showMenu(user);
+        } else if ("DISPATCHER".equals(role) || "OFFICE STAFF".equals(role)) {
+            System.out.println("\nRouting to Dispatcher Dashboard... (Menu coming in next deliverable)");
+        } else if ("RIDER".equals(role) || "DELIVERY RIDER".equals(role)) {
+            System.out.println("\nRouting to Delivery Rider Dashboard... (Menu coming in next deliverable)");
+        } else {
+            System.out.println("\nUnknown user role: " + role);
+        }
     }
 }
