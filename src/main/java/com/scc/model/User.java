@@ -1,9 +1,10 @@
-package model;
+package com.scc.model;
 
 public record User(
-        int id,
+        int userId,
         String username,
-        String roles,
+        String password,
+        String fullName,
+        String role,
         String status
-) {
-}
+) {}

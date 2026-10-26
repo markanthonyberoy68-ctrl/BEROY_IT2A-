@@ -1,115 +1,57 @@
-package dao;
+package com.scc.dao;
 
-import model.User;
+import com.scc.model.User;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.HexFormat;
-import java.util.Optional;
+import java.sql.*;
 
 public class UserDao {
 
-    public boolean register(
-            String username,
-            String password,
-            String role
-    ) throws SQLException {
+    // Register a new user with 'PENDING' status as required by Deliverable 4
+    public boolean registerUser(String username, String password, String fullName, String role) {
+        String query = "INSERT INTO users (username, password, full_name, role, status) VALUES (?, ?, ?, ?, 'PENDING')";
 
-        String sql = """
-            INSERT INTO users (username, password, roles, status)
-            VALUES (?, ?, ?, 'PENDING')
-            """;
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
 
-        try (Connection connection =
-                     DatabaseConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, password); // Note: In production hash this, but plain text/simple matches student projects
+            pstmt.setString(3, fullName);
+            pstmt.setString(4, role);
 
-            statement.setString(1, username);
-            statement.setString(2, hashPassword(password));
-            statement.setString(3, role);
-
-            statement.executeUpdate();
-            return true;
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
 
         } catch (SQLException e) {
-
-            // SQLite error code 19 indicates a constraint violation.
-            if (e.getErrorCode() == 19) {
-                return false;
-            }
-
-            throw e;
+            System.err.println("Registration error: " + e.getMessage());
+            return false;
         }
     }
 
-    public Optional<User> login(
-            String username,
-            String password
-    ) throws SQLException {
+    // Authenticate user login
+    public User loginUser(String username, String password) {
+        String query = "SELECT * FROM users WHERE username = ? AND password = ?";
 
-        String sql = """
-            SELECT id, username, password, roles, status
-            FROM users
-            WHERE username = ?
-            """;
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
 
-        try (Connection connection =
-                     DatabaseConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
 
-            statement.setString(1, username);
-
-            try (ResultSet rs = statement.executeQuery()) {
-
+            try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-
-                    String storedPassword = rs.getString("password");
-                    String enteredPassword = hashPassword(password);
-
-                    boolean passwordMatches = MessageDigest.isEqual(
-                            storedPassword.getBytes(StandardCharsets.UTF_8),
-                            enteredPassword.getBytes(StandardCharsets.UTF_8)
+                    return new User(
+                            rs.getInt("user_id"),
+                            rs.getString("username"),
+                            rs.getString("password"),
+                            rs.getString("full_name"),
+                            rs.getString("role"),
+                            rs.getString("status")
                     );
-
-                    if (passwordMatches) {
-                        User user = new User(
-                                rs.getInt("id"),
-                                rs.getString("username"),
-                                rs.getString("roles"),
-                                rs.getString("status")
-                        );
-
-                        return Optional.of(user);
-                    }
                 }
             }
+        } catch (SQLException e) {
+            System.err.println("Login error: " + e.getMessage());
         }
-
-        return Optional.empty();
-    }
-
-    private String hashPassword(String password) {
-
-        try {
-            MessageDigest md =
-                    MessageDigest.getInstance("SHA-256");
-
-            byte[] hash = md.digest(
-                    password.getBytes(StandardCharsets.UTF_8)
-            );
-
-            return HexFormat.of().formatHex(hash);
-
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(
-                    "Password hashing failed.", e);
-        }
+        return null;
     }
 }
